@@ -1,0 +1,20 @@
+syntax = "proto3";
+
+package Services;
+
+option go_package = "simple_grpc/protos";
+
+import "google/protobuf/timestamp.proto";
+
+service Timing {
+  rpc Call(CallRequest) returns (stream CallResponse);
+}
+
+message CallRequest {
+  string Name = 1;
+}
+
+message CallResponse {
+  google.protobuf.Timestamp Timestamp = 1;
+  string Message = 2;
+}

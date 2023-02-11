@@ -1,0 +1,20 @@
+{
+  "description": "gRPC-Web test",
+  "scripts": {
+    "start": "npm run dev",
+    "dev": "npm run proto:generate && vite",
+    "serve": "vite preview",
+    "build": "npm run proto:generate && vite build",
+    "proto:generate": "npx protoc --ts_out src/protos --proto_path ..\\protos ..\\protos\\*.proto"
+  },
+  "dependencies": {
+    "@protobuf-ts/grpcweb-transport": "^2.8.2",
+    "solid-js": "^1.6.9",
+    "vite": "^4.1.1",
+    "vite-plugin-solid": "^2.5.0"
+  },
+  "devDependencies": {
+    "@protobuf-ts/plugin": "^2.8.2",
+    "@protobuf-ts/protoc": "^2.8.2"
+  }
+}

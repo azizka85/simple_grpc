@@ -1,0 +1,37 @@
+syntax = "proto3";
+
+option go_package = "simple_grpc/protos";
+package Services;
+
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/empty.proto";
+
+service Chat {
+  rpc Join(User) returns (stream ChatMessage);
+  rpc SendMessage(ChatMessage) returns (google.protobuf.Empty);
+}
+
+message User {
+  string Name = 1;
+}
+
+message JoinResponse {
+  bool Success = 1;
+  string Message = 2;
+  repeated User Users = 3;
+}
+
+message UserMessage {
+  User From = 1;
+  string Message = 2;
+}
+
+message ChatMessage {
+  google.protobuf.Timestamp Timestamp = 1;
+  oneof message {
+    JoinResponse Response = 2;
+    UserMessage Message = 3;
+    User ExitSignal = 4;
+    User EnterSignal = 5;
+  }
+}
