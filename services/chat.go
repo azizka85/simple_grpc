@@ -8,6 +8,7 @@ import (
 	"sync"
 
 	"github.com/samber/lo"
+	"google.golang.org/grpc/peer"
 	"google.golang.org/protobuf/types/known/emptypb"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
@@ -25,6 +26,10 @@ var mutex = &sync.RWMutex{}
 var users = map[string]*ChatUser{}
 
 func (cs *ChatService) Join(user *protos.User, res protos.Chat_JoinServer) (err error) {
+	peerInfo, peerOk := peer.FromContext(res.Context())
+	if peerOk {
+		fmt.Println(peerInfo.Addr)
+	}
 	ok := true
 	mutex.Lock()
 	if _, ok = users[user.Name]; !ok {

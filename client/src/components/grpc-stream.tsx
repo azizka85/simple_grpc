@@ -1,6 +1,10 @@
-import { createSignal, onCleanup } from 'solid-js'
+import { For, onCleanup, onMount } from 'solid-js'
+import { createStore, produce } from 'solid-js/store'
+
 import { RpcError } from '@protobuf-ts/runtime-rpc'
+
 import inject from '../inject'
+
 import { Timestamp } from '../protos/google/protobuf/timestamp'
 import { CallResponse } from '../protos/timing'
 import { TimingClient } from '../protos/timing.client'
@@ -8,42 +12,59 @@ import { sleep } from '../hooks/timer'
 
 const client = new TimingClient(inject.grpcTransport)
 
-export default function() {
-  const [messages, setMessages] = createSignal<CallResponse[]>([])
+type GrpcStreamProps = {
+  call: boolean
+}
+
+export default function(props: GrpcStreamProps) {
+  const [store, setStore] = createStore({ messages: [] as CallResponse[] })
   let input: HTMLInputElement | undefined
   let abortController: AbortController | null = null
-  let aborted = false
   
-  onCleanup(() => abort())  
-  
-  function stream() {
-    aborted = false
-    call()
+  onMount(() => {
+    if(props.call) {
+      call()
+    }
+  })
+  onCleanup(() => cancel())  
+
+  function addMessage(message: CallResponse) {
+    setStore(
+      'messages',
+      produce(messages => messages.push(message))
+    )
+  }
+
+  function clearMessages() {
+    setStore('messages', [])
   }
 
   async function call() {
     try {     
       cancel()
-      messages().length = 0      
+      clearMessages()
+
       abortController = new AbortController()    
       const abort = abortController.signal
+      
       const streamingCall = client.call({
         name: input?.value || 'RAMS Signature'
       }, {
         abort
       })
+      
       for await (const message of streamingCall.responses) {
-        messages().push(message)
-        setMessages([
-          ...messages()
-        ])
+        addMessage(message)
       }
     } catch(error) {            
       console.error(error)
-      if(!aborted && (!(error instanceof RpcError) || error.code !== 'CANCELLED')) {
+
+      if(!(error instanceof RpcError) || error.code !== 'CANCELLED') {
         await sleep(import.meta.env.APP_GrpcUpdateIfErrorMs ?? 3000)      
+
         console.log('recalling...')
-        call()
+
+        await call()
       }           
     }
   }  
@@ -52,11 +73,6 @@ export default function() {
     abortController?.abort('client canceled')
     console.log('aborted:', abortController?.signal.aborted, abortController?.signal.reason)
   }
-
-  function abort() {
-    aborted = true
-    cancel()
-  }  
 
   return (
     <div>
@@ -69,13 +85,13 @@ export default function() {
         />
         &nbsp;
         <button
-          onClick={() => stream()}
+          onClick={() => call()}
         >
           Stream
         </button>
         &nbsp;
         <button
-          onClick={() => abort()}
+          onClick={() => cancel()}
         >
           Cancel
         </button>
@@ -83,13 +99,15 @@ export default function() {
       <br />
       <div>
         <ol>
-          {messages().map((message, index) => (
-            <li>
-              {Timestamp.toDate(message.timestamp ?? Timestamp.now()).toLocaleString()}
-              -
-              {message.message}
-            </li>
-          ))}
+          <For each={store.messages}>
+            {(message) => 
+              <li>
+                {Timestamp.toDate(message.timestamp ?? Timestamp.now()).toLocaleString()}
+                -
+                {message.message}
+              </li>
+            }
+          </For>
         </ol>
       </div>
     </div>
